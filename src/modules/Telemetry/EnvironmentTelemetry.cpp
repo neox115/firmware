@@ -21,130 +21,22 @@
 #include "target_specific.h"
 #include <OLEDDisplay.h>
 
-#if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR_EXTERNAL
+#include "graphics/ScreenFonts.h"
+#include <Throttle.h>
 
-// Sensors
-#include "Sensor/CGRadSensSensor.h"
-#include "Sensor/RCWL9620Sensor.h"
-#include "Sensor/nullSensor.h"
+#include <forward_list>
+
+// 唯一使う環境センサー
+#include "Sensor/MiniSolarIna228Pt100Sensor.h"
 
 namespace graphics
 {
 extern void drawCommonHeader(OLEDDisplay *display, int16_t x, int16_t y, const char *titleStr, bool force_no_invert,
                              bool show_date);
 }
-#if __has_include(<Adafruit_AHTX0.h>)
-#include "Sensor/AHT10.h"
-#endif
-
-#if __has_include(<Adafruit_BME280.h>)
-#include "Sensor/BME280Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_BMP085.h>)
-#include "Sensor/BMP085Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_BMP280.h>)
-#include "Sensor/BMP280Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_LTR390.h>)
-#include "Sensor/LTR390UVSensor.h"
-#endif
-
-#if __has_include(<bsec2.h>)
-#include "Sensor/BME680Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_DPS310.h>)
-#include "Sensor/DPS310Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_MCP9808.h>)
-#include "Sensor/MCP9808Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_SHT31.h>)
-#include "Sensor/SHT31Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_LPS2X.h>)
-#include "Sensor/LPS22HBSensor.h"
-#endif
-
-#if __has_include(<Adafruit_SHTC3.h>)
-#include "Sensor/SHTC3Sensor.h"
-#endif
-
-#if __has_include("RAK12035_SoilMoisture.h") && defined(RAK_4631) && RAK_4631 == 1
-#include "Sensor/RAK12035Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_VEML7700.h>)
-#include "Sensor/VEML7700Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_TSL2591.h>)
-#include "Sensor/TSL2591Sensor.h"
-#endif
-
-#if __has_include(<ClosedCube_OPT3001.h>)
-#include "Sensor/OPT3001Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_SHT4x.h>)
-#include "Sensor/SHT4XSensor.h"
-#endif
-
-#if __has_include(<SparkFun_MLX90632_Arduino_Library.h>)
-#include "Sensor/MLX90632Sensor.h"
-#endif
-
-#if __has_include(<DFRobot_LarkWeatherStation.h>)
-#include "Sensor/DFRobotLarkSensor.h"
-#endif
-
-#if __has_include(<DFRobot_RainfallSensor.h>)
-#include "Sensor/DFRobotGravitySensor.h"
-#endif
-
-#if __has_include(<SparkFun_Qwiic_Scale_NAU7802_Arduino_Library.h>)
-#include "Sensor/NAU7802Sensor.h"
-#endif
-
-#if __has_include(<Adafruit_BMP3XX.h>)
-#include "Sensor/BMP3XXSensor.h"
-#endif
-
-#if __has_include(<Adafruit_PCT2075.h>)
-#include "Sensor/PCT2075Sensor.h"
-#endif
-
-#endif
-#ifdef T1000X_SENSOR_EN
-#include "Sensor/T1000xSensor.h"
-#endif
-
-#ifdef SENSECAP_INDICATOR
-#include "Sensor/IndicatorSensor.h"
-#endif
-
-#if __has_include(<Adafruit_TSL2561_U.h>)
-#include "Sensor/TSL2561Sensor.h"
-#endif
-
-#if __has_include(<BH1750_WE.h>)
-#include "Sensor/BH1750Sensor.h"
-#endif
 
 #define FAILED_STATE_SENSOR_READ_MULTIPLIER 10
 #define DISPLAY_RECEIVEID_MEASUREMENTS_ON_SCREEN true
-
-#include "graphics/ScreenFonts.h"
-#include <Throttle.h>
-
-#include <forward_list>
 
 static std::forward_list<TelemetrySensor *> sensors;
 
@@ -177,100 +69,12 @@ void EnvironmentTelemetryModule::i2cScanFinished(ScanI2C *i2cScanner)
     if (!moduleConfig.telemetry.environment_measurement_enabled && !ENVIRONMENTAL_TELEMETRY_MODULE_ENABLE) {
         return;
     }
-    LOG_INFO("Environment Telemetry adding I2C devices...");
+    LOG_INFO("Environment Telemetry: adding MiniSolar INA228+PT100 sensor...");
 
-    // order by priority of metrics/values (low top, high bottom)
+    sensors.clear();
 
-#if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR
-#ifdef T1000X_SENSOR_EN
-    // Not a real I2C device
-    addSensor<T1000xSensor>(i2cScanner, ScanI2C::DeviceType::NONE);
-#else
-#ifdef SENSECAP_INDICATOR
-    // Not a real I2C device, uses UART
-    addSensor<IndicatorSensor>(i2cScanner, ScanI2C::DeviceType::NONE);
-#endif
-    addSensor<RCWL9620Sensor>(i2cScanner, ScanI2C::DeviceType::RCWL9620);
-    addSensor<CGRadSensSensor>(i2cScanner, ScanI2C::DeviceType::CGRADSENS);
-#endif
-#endif
-
-#if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR && !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR_EXTERNAL
-#if __has_include(<DFRobot_LarkWeatherStation.h>)
-    addSensor<DFRobotLarkSensor>(i2cScanner, ScanI2C::DeviceType::DFROBOT_LARK);
-#endif
-#if __has_include(<DFRobot_RainfallSensor.h>)
-    addSensor<DFRobotGravitySensor>(i2cScanner, ScanI2C::DeviceType::DFROBOT_RAIN);
-#endif
-#if __has_include(<Adafruit_AHTX0.h>)
-    addSensor<AHT10Sensor>(i2cScanner, ScanI2C::DeviceType::AHT10);
-#endif
-#if __has_include(<Adafruit_BMP085.h>)
-    addSensor<BMP085Sensor>(i2cScanner, ScanI2C::DeviceType::BMP_085);
-#endif
-#if __has_include(<Adafruit_BME280.h>)
-    addSensor<BME280Sensor>(i2cScanner, ScanI2C::DeviceType::BME_280);
-#endif
-#if __has_include(<Adafruit_LTR390.h>)
-    addSensor<LTR390UVSensor>(i2cScanner, ScanI2C::DeviceType::LTR390UV);
-#endif
-#if __has_include(<bsec2.h>)
-    addSensor<BME680Sensor>(i2cScanner, ScanI2C::DeviceType::BME_680);
-#endif
-#if __has_include(<Adafruit_BMP280.h>)
-    addSensor<BMP280Sensor>(i2cScanner, ScanI2C::DeviceType::BMP_280);
-#endif
-#if __has_include(<Adafruit_DPS310.h>)
-    addSensor<DPS310Sensor>(i2cScanner, ScanI2C::DeviceType::DPS310);
-#endif
-#if __has_include(<Adafruit_MCP9808.h>)
-    addSensor<MCP9808Sensor>(i2cScanner, ScanI2C::DeviceType::MCP9808);
-#endif
-#if __has_include(<Adafruit_SHT31.h>)
-    addSensor<SHT31Sensor>(i2cScanner, ScanI2C::DeviceType::SHT31);
-#endif
-#if __has_include(<Adafruit_LPS2X.h>)
-    addSensor<LPS22HBSensor>(i2cScanner, ScanI2C::DeviceType::LPS22HB);
-#endif
-#if __has_include(<Adafruit_SHTC3.h>)
-    addSensor<SHTC3Sensor>(i2cScanner, ScanI2C::DeviceType::SHTC3);
-#endif
-#if __has_include("RAK12035_SoilMoisture.h") && defined(RAK_4631) && RAK_4631 == 1
-    addSensor<RAK12035Sensor>(i2cScanner, ScanI2C::DeviceType::RAK12035);
-#endif
-#if __has_include(<Adafruit_VEML7700.h>)
-    addSensor<VEML7700Sensor>(i2cScanner, ScanI2C::DeviceType::VEML7700);
-#endif
-#if __has_include(<Adafruit_TSL2591.h>)
-    addSensor<TSL2591Sensor>(i2cScanner, ScanI2C::DeviceType::TSL2591);
-#endif
-#if __has_include(<ClosedCube_OPT3001.h>)
-    addSensor<OPT3001Sensor>(i2cScanner, ScanI2C::DeviceType::OPT3001);
-#endif
-#if __has_include(<Adafruit_SHT4x.h>)
-    addSensor<SHT4XSensor>(i2cScanner, ScanI2C::DeviceType::SHT4X);
-#endif
-#if __has_include(<SparkFun_MLX90632_Arduino_Library.h>)
-    addSensor<MLX90632Sensor>(i2cScanner, ScanI2C::DeviceType::MLX90632);
-#endif
-
-#if __has_include(<Adafruit_BMP3XX.h>)
-    addSensor<BMP3XXSensor>(i2cScanner, ScanI2C::DeviceType::BMP_3XX);
-#endif
-#if __has_include(<Adafruit_PCT2075.h>)
-    addSensor<PCT2075Sensor>(i2cScanner, ScanI2C::DeviceType::PCT2075);
-#endif
-#if __has_include(<Adafruit_TSL2561_U.h>)
-    addSensor<TSL2561Sensor>(i2cScanner, ScanI2C::DeviceType::TSL2561);
-#endif
-#if __has_include(<SparkFun_Qwiic_Scale_NAU7802_Arduino_Library.h>)
-    addSensor<NAU7802Sensor>(i2cScanner, ScanI2C::DeviceType::NAU7802);
-#endif
-#if __has_include(<BH1750_WE.h>)
-    addSensor<BH1750Sensor>(i2cScanner, ScanI2C::DeviceType::BH1750);
-#endif
-
-#endif
+    // I2C デバイス種別には依存せず、自前センサー 1 個だけを追加
+    addSensor<MiniSolarIna228Pt100Sensor>(i2cScanner, ScanI2C::DeviceType::NONE);
 }
 
 int32_t EnvironmentTelemetryModule::runOnce()
@@ -284,6 +88,7 @@ int32_t EnvironmentTelemetryModule::runOnce()
     }
 
     uint32_t result = UINT32_MAX;
+
     /*
         Uncomment the preferences below if you want to use the module
         without having to configure it from the PythonAPI or WebUI.
@@ -306,28 +111,13 @@ int32_t EnvironmentTelemetryModule::runOnce()
         if (moduleConfig.telemetry.environment_measurement_enabled || ENVIRONMENTAL_TELEMETRY_MODULE_ENABLE) {
             LOG_INFO("Environment Telemetry: init");
 
-            // check if we have at least one sensor
             if (!sensors.empty()) {
                 result = DEFAULT_SENSOR_MINIMUM_WAIT_TIME_BETWEEN_READS;
             }
-
-#ifdef T1000X_SENSOR_EN
-#elif !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR_EXTERNAL
-            if (ina219Sensor.hasSensor())
-                result = ina219Sensor.runOnce();
-            if (ina260Sensor.hasSensor())
-                result = ina260Sensor.runOnce();
-            if (ina3221Sensor.hasSensor())
-                result = ina3221Sensor.runOnce();
-            if (max17048Sensor.hasSensor())
-                result = max17048Sensor.runOnce();
-                // this only works on the wismesh hub with the solar option. This is not an I2C sensor, so we don't need the
-                // sensormap here.
-#ifdef HAS_RAKPROT
-            result = rak9154Sensor.runOnce();
-#endif
-#endif
         }
+
+        // INA219/INA260/INA3221/MAX17048/Rak 等の runOnce 呼び出しはすべて削除済み
+
         // it's possible to have this module enabled, only for displaying values on the screen.
         // therefore, we should only enable the sensor loop if measurement is also enabled
         return result == UINT32_MAX ? disable() : setStartDelay();
@@ -567,28 +357,8 @@ bool EnvironmentTelemetryModule::getEnvironmentTelemetry(meshtastic_Telemetry *m
         hasSensor = true;
     }
 
-#ifndef T1000X_SENSOR_EN
-    if (ina219Sensor.hasSensor()) {
-        valid = valid && ina219Sensor.getMetrics(m);
-        hasSensor = true;
-    }
-    if (ina260Sensor.hasSensor()) {
-        valid = valid && ina260Sensor.getMetrics(m);
-        hasSensor = true;
-    }
-    if (ina3221Sensor.hasSensor()) {
-        valid = valid && ina3221Sensor.getMetrics(m);
-        hasSensor = true;
-    }
-    if (max17048Sensor.hasSensor()) {
-        valid = valid && max17048Sensor.getMetrics(m);
-        hasSensor = true;
-    }
-#endif
-#ifdef HAS_RAKPROT
-    valid = valid && rak9154Sensor.getMetrics(m);
-    hasSensor = true;
-#endif
+    // INA219/INA260/INA3221/MAX17048/Rak9154 等はすべて削除
+
     return valid && hasSensor;
 }
 
@@ -687,36 +457,15 @@ AdminMessageHandleResult EnvironmentTelemetryModule::handleAdminMessageForModule
                                                                                  meshtastic_AdminMessage *response)
 {
     AdminMessageHandleResult result = AdminMessageHandleResult::NOT_HANDLED;
-#if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR_EXTERNAL
 
+    // TelemetrySensor（MiniSolarIna228Pt100Sensor）が AdminMessage を扱う場合だけここで対応
     for (TelemetrySensor *sensor : sensors) {
         result = sensor->handleAdminMessage(mp, request, response);
         if (result != AdminMessageHandleResult::NOT_HANDLED)
             return result;
     }
 
-    if (ina219Sensor.hasSensor()) {
-        result = ina219Sensor.handleAdminMessage(mp, request, response);
-        if (result != AdminMessageHandleResult::NOT_HANDLED)
-            return result;
-    }
-    if (ina260Sensor.hasSensor()) {
-        result = ina260Sensor.handleAdminMessage(mp, request, response);
-        if (result != AdminMessageHandleResult::NOT_HANDLED)
-            return result;
-    }
-    if (ina3221Sensor.hasSensor()) {
-        result = ina3221Sensor.handleAdminMessage(mp, request, response);
-        if (result != AdminMessageHandleResult::NOT_HANDLED)
-            return result;
-    }
-    if (max17048Sensor.hasSensor()) {
-        result = max17048Sensor.handleAdminMessage(mp, request, response);
-        if (result != AdminMessageHandleResult::NOT_HANDLED)
-            return result;
-    }
-#endif
     return result;
 }
 
-#endif
+#endif // HAS_TELEMETRY && !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR
